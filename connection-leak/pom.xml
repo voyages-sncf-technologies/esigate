@@ -5,6 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>connection-leak</artifactId>
+    <parent>
+        <groupId>org.esigate</groupId>
+        <artifactId>esigate</artifactId>
+        <version>5.1</version>
+    </parent>
+
     <build>
         <plugins>
             <plugin>
@@ -17,25 +23,11 @@
             </plugin>
         </plugins>
     </build>
-    <parent>
-        <groupId>org.esigate</groupId>
-        <artifactId>esigate</artifactId>
-        <version>5.1</version>
-    </parent>
+
     <dependencies>
         <dependency>
             <groupId>org.esigate</groupId>
             <artifactId>esigate-server</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.esigate</groupId>
-            <artifactId>esigate-core</artifactId>
-            <exclusions>
-                <exclusion>
-                    <artifactId>jcl-over-slf4j</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -50,10 +42,19 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.1.1</version>
         </dependency>
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>snapshots-repo</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+    </repositories>
 
 </project>

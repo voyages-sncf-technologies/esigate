@@ -24,11 +24,19 @@ public class TestLeak {
 
     @Before
     public void setUp() throws Exception {
+        Properties httpProperties = new Properties();
+        httpProperties.load(getClass().getClassLoader().getResourceAsStream("org/apache/http/client/version.properties"));
+
         stubFor(get(urlEqualTo("/redirect"))
                 .willReturn(aResponse()
                         .withStatus(302)
                         .withHeader("Location", "/include")
                         .withBody("<response>Some content</response>")));
+
+        stubFor(get(urlEqualTo("/redirectEmpty"))
+                .willReturn(aResponse()
+                        .withStatus(302)
+                        .withHeader("Location", "/include")));
 
         stubFor(get(urlEqualTo("/include"))
                 .willReturn(aResponse()
@@ -38,16 +46,19 @@ public class TestLeak {
         stubFor(get(urlEqualTo("/page"))
                 .willReturn(aResponse()
                         .withStatus(200)
-                        .withHeader("Content-Type","text/html")
+                        .withHeader("Content-Type", "text/html")
                         .withBody("<html><body><esi:include src='$(PROVIDER{backend})/redirect' /></body></html>")));
 
-
+        stubFor(get(urlEqualTo("/page2"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/html")
+                        .withBody("<html><body><esi:include src='$(PROVIDER{backend})/redirectEmpty' /></body></html>")));
 
         Thread t = new Thread(() -> {
             try {
-                Properties properties = new Properties();
-                properties.setProperty("config", "connection-leak/src/test/resources/esigate.properties");
-                EsigateServer.init(properties);
+                System.setProperty("esigate.config", getClass().getClassLoader().getResource("esigate.properties").getFile());
+                EsigateServer.init();
                 EsigateServer.start();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -70,25 +81,27 @@ public class TestLeak {
     }
 
     @Test(timeout = 5000)
-    public void testSingleConnection() throws Exception {
-        Assert.assertEquals("<html><body>content</body></html>",doGet("http://localhost:8080/page"));
-    }
-
-    @Test(timeout = 5000)
     public void testConnectionUnderPoolSize() throws Exception {
         for (int i = 0; i < 5; i++) {
-            Assert.assertEquals("<html><body>content</body></html>",doGet("http://localhost:8080/page"));
+            Assert.assertEquals("<html><body>content</body></html>", doGet("http://localhost:8080/page"));
         }
     }
 
     @Test(timeout = 5000)
     public void testConnectionOverPoolSize() throws Exception {
         for (int i = 0; i < 50; i++) {
-            Assert.assertEquals("<html><body>content</body></html>",doGet("http://localhost:8080/page"));
+            Assert.assertEquals("<html><body>content</body></html>", doGet("http://localhost:8080/page"));
         }
     }
 
     @Test(timeout = 5000)
+    public void testConnectionOverPoolSize2() throws Exception {
+        for (int i = 0; i < 50; i++) {
+            Assert.assertEquals("<html><body>content</body></html>", doGet("http://localhost:8080/page2"));
+        }
+    }
+
+    @Test
     public void test50redirect() throws Exception {
         for (int i = 0; i < 50; i++) {
             Assert.assertEquals("content",doGet("http://localhost:8080/redirect"));
@@ -99,7 +112,9 @@ public class TestLeak {
         URLConnection connection = new URL(url).openConnection();
         InputStream response = connection.getInputStream();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(response))) {
-            return reader.readLine();
+            String line = reader.readLine();
+            System.out.println(line);
+            return line;
         }
     }
 
